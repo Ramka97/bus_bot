@@ -1,0 +1,3 @@
+# Скопируйте в application-local.properties или application.properties
+# и укажите токен
+bot.token=YOUR_BOT_TOKEN

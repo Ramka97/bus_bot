@@ -1,0 +1,27 @@
+# Сборка Maven
+target/
+pom.xml.tag
+*.jar
+*.war
+*.ear
+
+# IDE и JDK (установка Java от Cursor/IntelliJ)
+.idea/
+.jdks/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Локальные настройки и секреты (токен не попадает в репозиторий)
+application-local.properties
+*.env
+
+# Данные парка (опционально: уберите эту строку, если хотите хранить buspark.dat в репо)
+buspark.dat
+reminder_chats.txt
+
+# Логи и временные файлы
+*.log
+.DS_Store
+Thumbs.db

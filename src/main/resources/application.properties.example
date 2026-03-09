@@ -1,0 +1,3 @@
+# Скопируйте в application.properties и укажите токен
+# Или задайте переменную окружения: BOT_TOKEN=your_token_here
+bot.token=YOUR_BOT_TOKEN_HERE
