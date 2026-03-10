@@ -16,8 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Реализация репозитория с сохранением в файл buspark.dat.
+ * Не используется по умолчанию (данные хранятся в БД H2).
  */
-@Repository
+// @Repository — отключено, по умолчанию используется JpaBusRepository (H2)
 public class FileBusRepository implements BusRepository {
 
     private static final String SEPARATOR = ";";
