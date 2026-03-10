@@ -304,14 +304,12 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
 
     private InlineKeyboardMarkup buildListBusKeyboard(List<Bus> buses) {
         var rows = new ArrayList<InlineKeyboardRow>();
-        var currentRow = new InlineKeyboardRow();
         for (Bus bus : buses) {
             String data = "listbus:" + bus.getStateNumber();
             if (data.length() > 64) data = data.substring(0, 64);
-            currentRow.add(InlineKeyboardButton.builder().text("🚌 " + bus.getStateNumber()).callbackData(data).build());
-            if (currentRow.size() >= 3) { rows.add(currentRow); currentRow = new InlineKeyboardRow(); }
+            rows.add(new InlineKeyboardRow(
+                    InlineKeyboardButton.builder().text("🚌 " + bus.getStateNumber()).callbackData(data).build()));
         }
-        if (!currentRow.isEmpty()) rows.add(currentRow);
         return new InlineKeyboardMarkup(rows);
     }
 
@@ -334,13 +332,24 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
         send(chatId, sb.toString());
     }
 
+    private static final java.time.format.DateTimeFormatter DATE_FORMAT =
+            java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
     private String formatBusWithMaintenance(Bus bus) {
         MaintenanceInfo info = MaintenanceCalculator.calculate(bus);
         var sb = new StringBuilder();
         sb.append("🚌 ").append(bus.getStateNumber()).append(" (").append(bus.getModel().getDisplayName()).append(")\n");
         sb.append("Пробег: ").append(bus.getMileageKm()).append(" км\n");
-        sb.append("ТО-1: с последнего ").append(info.getMileageSinceLastTO1()).append(" км, до след. ").append(info.getKmUntilNextTO1()).append(" км\n");
-        sb.append("ТО-2: с последнего ").append(info.getMileageSinceLastTO2()).append(" км, до след. ").append(info.getKmUntilNextTO2()).append(" км\n");
+        if (bus.getLastMileageUpdateAt() != null) {
+            sb.append("Последнее обновление пробега: ").append(bus.getLastMileageUpdateAt().format(DATE_FORMAT)).append("\n");
+        }
+        if (info.isZhongTong()) {
+            sb.append("(Для ZHONG TONG считается только ТО-2 каждые 50 000 км)\n");
+            sb.append("ТО-2: с последнего ").append(info.getMileageSinceLastTO2()).append(" км, до след. ").append(info.getKmUntilNextTO2()).append(" км\n");
+        } else {
+            sb.append("ТО-1: с последнего ").append(info.getMileageSinceLastTO1()).append(" км, до след. ").append(info.getKmUntilNextTO1()).append(" км\n");
+            sb.append("ТО-2: с последнего ").append(info.getMileageSinceLastTO2()).append(" км, до след. ").append(info.getKmUntilNextTO2()).append(" км\n");
+        }
         if (info.isWarningTO1()) sb.append("⚠ Менее 1000 км до ТО-1!\n");
         if (info.isWarningTO2()) sb.append("⚠ Менее 1000 км до ТО-2!\n");
         return sb.toString();

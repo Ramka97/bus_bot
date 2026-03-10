@@ -8,6 +8,6 @@ import com.busfleet.model.Bus;
 public class MaintenanceCalculator {
 
     public static MaintenanceInfo calculate(Bus bus) {
-        return new MaintenanceInfo(bus.getMileageKm());
+        return new MaintenanceInfo(bus.getMileageKm(), bus.getModel());
     }
 }

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,7 +42,13 @@ public class FileBusRepository implements BusRepository {
                         try {
                             BusModel model = BusModel.valueOf(parts[1].trim());
                             long mileage = Long.parseLong(parts[2].trim());
-                            Bus bus = new Bus(parts[0].trim(), model, mileage);
+                            LocalDateTime lastUpdate = null;
+                            if (parts.length >= 4 && !parts[3].trim().isEmpty()) {
+                                try {
+                                    lastUpdate = LocalDateTime.parse(parts[3].trim());
+                                } catch (Exception ignored) {}
+                            }
+                            Bus bus = new Bus(parts[0].trim(), model, mileage, lastUpdate);
                             buses.put(bus.getStateNumber(), bus);
                         } catch (IllegalArgumentException ignored) {
                         }
@@ -57,9 +64,13 @@ public class FileBusRepository implements BusRepository {
         try {
             List<String> lines = new ArrayList<>();
             for (Bus bus : buses.values()) {
+                String lastUpdate = bus.getLastMileageUpdateAt() != null
+                        ? bus.getLastMileageUpdateAt().toString()
+                        : "";
                 lines.add(bus.getStateNumber() + SEPARATOR
                         + bus.getModel().name() + SEPARATOR
-                        + bus.getMileageKm());
+                        + bus.getMileageKm() + SEPARATOR
+                        + lastUpdate);
             }
             Files.write(filePath, lines, StandardCharsets.UTF_8);
         } catch (IOException e) {
