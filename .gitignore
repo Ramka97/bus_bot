@@ -17,9 +17,10 @@ pom.xml.tag
 application-local.properties
 *.env
 
-# Данные парка (опционально: уберите эту строку, если хотите хранить buspark.dat в репо)
+# Данные парка и база H2 (не коммитить)
 buspark.dat
 reminder_chats.txt
+data/
 
 # Логи и временные файлы
 *.log

@@ -6,6 +6,7 @@ import com.busfleet.service.BusService;
 import com.busfleet.service.MaintenanceCalculator;
 import com.busfleet.service.MaintenanceInfo;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@ConditionalOnExpression("!'${bot.token:}'.trim().isEmpty()")
 public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 
     private final String botToken;
