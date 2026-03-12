@@ -26,5 +26,11 @@ public class BusFleetApplication {
         if (token.isEmpty()) {
             System.out.println("\n>>> Telegram-бот не запущен: токен не задан. Укажите BOT_TOKEN в Environment variables или в application-local.properties (профиль local) и перезапустите.\n");
         }
+        String dataSourceUrl = env.getProperty("spring.datasource.url", "");
+        if (dataSourceUrl.contains("postgresql")) {
+            System.out.println("\n>>> База данных: PostgreSQL — данные сохраняются между деплоями.\n");
+        } else {
+            System.out.println("\n>>> База данных: H2 (файл). На Railway при каждом деплое данные теряются! Добавьте переменную DATABASE_URL (ссылка на Postgres) в настройках сервиса.\n");
+        }
     }
 }
