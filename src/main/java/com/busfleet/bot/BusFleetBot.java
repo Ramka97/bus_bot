@@ -397,11 +397,10 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
         return sb.toString();
     }
 
-    /** Клавиатура выбора модели при добавлении автобуса. MAZ_203 не показываем — только Мерс/Китай. Кнопки в столбец. */
+    /** Клавиатура выбора модели при добавлении автобуса. Кнопки в столбец. */
     private InlineKeyboardMarkup buildModelKeyboard() {
         var rows = new ArrayList<InlineKeyboardRow>();
         for (BusModel m : BusModel.values()) {
-            if (m == BusModel.MAZ_203) continue; // старый вариант скрыт, выбирают Мерс или Китай
             rows.add(new InlineKeyboardRow(
                     InlineKeyboardButton.builder().text("🚌 " + m.getDisplayName()).callbackData("model:" + m.name()).build()));
         }
