@@ -12,8 +12,10 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -23,6 +25,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -94,6 +99,7 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
             case "/list", "📋 Список парка" -> sendList(chatId);
             case "/stats", "📊 Статистика" -> sendStats(chatId);
             case "/search", "🔍 Поиск автобуса" -> handleSearch(chatId, arg);
+            case "/export" -> sendExport(chatId);
             default -> send(chatId, "Неизвестная команда. Используйте /start или ❓ Помощь.");
         }
     }
@@ -230,6 +236,7 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
                 📋 Список парка — выбор модели → количество и перечень по гос. номерам → нажатие на автобус для ТО-1/ТО-2.
                 📊 Статистика — количество по моделям.
                 🔍 Поиск — по госномеру.
+                📥 /export — скачать резервную копию парка (CSV). Сохрани файл перед сменой хостинга.
                 ТО-1 — каждые 15 000 км, ТО-2 — каждые 30 000 км.
                 """);
     }
@@ -334,6 +341,39 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
         send(chatId, sb.toString());
     }
 
+    /** Экспорт всех автобусов в CSV — сохрани файл, чтобы не потерять данные при смене хостинга. */
+    private void sendExport(long chatId) throws TelegramApiException {
+        List<Bus> buses = busService.getAllBuses();
+        if (buses.isEmpty()) {
+            send(chatId, "Парк пуст. Нечего экспортировать.");
+            return;
+        }
+        String csv = buildBusesCsv(buses);
+        byte[] bytes = ("\uFEFF" + csv).getBytes(StandardCharsets.UTF_8); // BOM для Excel
+        String fileName = "buses_backup_" + java.time.LocalDate.now() + ".csv";
+        InputFile file = new InputFile(new ByteArrayInputStream(bytes), fileName);
+        telegramClient.execute(SendDocument.builder().chatId(chatId).document(file).caption("📥 Резервная копия парка (" + buses.size() + " автобусов). Сохрани файл — при смене хостинга данные не потеряются.").build());
+    }
+
+    private static String buildBusesCsv(List<Bus> buses) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        StringBuilder sb = new StringBuilder();
+        sb.append("state_number;model;mileage_km;last_mileage_update\n");
+        for (Bus b : buses) {
+            sb.append(escapeCsv(b.getStateNumber())).append(";");
+            sb.append(escapeCsv(b.getModel().getDisplayName())).append(";");
+            sb.append(b.getMileageKm()).append(";");
+            sb.append(b.getLastMileageUpdateAt() != null ? b.getLastMileageUpdateAt().format(dtf) : "").append("\n");
+        }
+        return sb.toString();
+    }
+
+    private static String escapeCsv(String s) {
+        if (s == null) return "";
+        if (s.contains(";") || s.contains("\"") || s.contains("\n")) return "\"" + s.replace("\"", "\"\"") + "\"";
+        return s;
+    }
+
     private static final java.time.format.DateTimeFormatter DATE_FORMAT =
             java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
@@ -375,14 +415,12 @@ public class BusFleetBot implements SpringLongPollingBot, LongPollingSingleThrea
 
     private InlineKeyboardMarkup buildBusListKeyboard(List<Bus> buses, String prefix) {
         var rows = new ArrayList<InlineKeyboardRow>();
-        var currentRow = new InlineKeyboardRow();
         for (Bus bus : buses) {
             String data = prefix + bus.getStateNumber();
             if (data.length() > 64) data = data.substring(0, 64);
-            currentRow.add(InlineKeyboardButton.builder().text("🚌 " + bus.getStateNumber() + " — " + bus.getMileageKm() + " км").callbackData(data).build());
-            if (currentRow.size() == 2) { rows.add(currentRow); currentRow = new InlineKeyboardRow(); }
+            rows.add(new InlineKeyboardRow(
+                    InlineKeyboardButton.builder().text("🚌 " + bus.getStateNumber() + " — " + bus.getMileageKm() + " км").callbackData(data).build()));
         }
-        if (!currentRow.isEmpty()) rows.add(currentRow);
         rows.add(new InlineKeyboardRow(InlineKeyboardButton.builder().text("❌ Отмена").callbackData("cancel").build()));
         return new InlineKeyboardMarkup(rows);
     }
